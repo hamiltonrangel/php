@@ -1,0 +1,376 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoramento de Ações</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background-color: white; /* Fundo branco da página */
+        }
+        
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .circulo {
+            width: 150px; /* 2cm de raio ≈ 4cm de diâmetro */
+            height: 150px;
+            border-radius: 50%;
+            background-color: white; /* Fundo branco por padrão */
+            border: 3px solid #333; /* Borda preta */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 10px;
+            box-sizing: border-box;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+        
+        .dado {
+            margin: 4px 0;
+            width: 100%;
+        }
+        
+        .rotulo {
+            font-size: 11px;
+            color: #7f8c8d;
+            font-weight: 600;
+        }
+        
+        .valor {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2c3e50;
+            padding: 2px 0;
+            border-bottom: 1px solid #ecf0f1;
+            width: 85%;
+            margin: 0 auto;
+        }
+        
+        .atual {
+            color: #e74c3c;
+        }
+        
+        .erro {
+            border-color: red; /* Borda vermelha para erros */
+        }
+        
+        .fundo-verde {
+            background-color: #d4edda; /* Verde claro para Posição positiva */
+        }
+        
+        .fundo-vermelho {
+            background-color: #f8d7da; /* Vermelho claro para Posição negativa */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- PETROBRAS -->
+        <div class="circulo" id="petrobras">
+            <div class="dado">
+                <div class="rotulo">Ticker</div>
+                <div class="valor" id="petrobras-ticker">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Atual</div>
+                <div class="valor atual" id="petrobras-atual">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Posição</div>
+                <div class="valor" id="petrobras-posicao">--</div>
+            </div>
+        </div>
+
+        <!-- KLABIN -->
+        <div class="circulo" id="klabin">
+            <div class="dado">
+                <div class="rotulo">Ticker</div>
+                <div class="valor" id="klabin-ticker">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Atual</div>
+                <div class="valor atual" id="klabin-atual">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Posição</div>
+                <div class="valor" id="klabin-posicao">--</div>
+            </div>
+        </div>
+
+        <!-- BANCO DO BRASIL -->
+        <div class="circulo" id="banco-brasil">
+            <div class="dado">
+                <div class="rotulo">Ticker</div>
+                <div class="valor" id="bb-ticker">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Atual</div>
+                <div class="valor atual" id="bb-atual">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Posição</div>
+                <div class="valor" id="bb-posicao">--</div>
+            </div>
+        </div>
+
+        <!-- BB SEGURIDADE -->
+        <div class="circulo" id="bb-seguridade">
+            <div class="dado">
+                <div class="rotulo">Ticker</div>
+                <div class="valor" id="bbseg-ticker">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Atual</div>
+                <div class="valor atual" id="bbseg-atual">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Posição</div>
+                <div class="valor" id="bbseg-posicao">--</div>
+            </div>
+        </div>
+
+        <!-- SANTANDER -->
+        <div class="circulo" id="santander">
+            <div class="dado">
+                <div class="rotulo">Ticker</div>
+                <div class="valor" id="santander-ticker">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Atual</div>
+                <div class="valor atual" id="santander-atual">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Posição</div>
+                <div class="valor" id="santander-posicao">--</div>
+            </div>
+        </div>
+
+        <!-- VALE -->
+        <div class="circulo" id="vale">
+            <div class="dado">
+                <div class="rotulo">Ticker</div>
+                <div class="valor" id="vale-ticker">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Atual</div>
+                <div class="valor atual" id="vale-atual">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Posição</div>
+                <div class="valor" id="vale-posicao">--</div>
+            </div>
+        </div>
+
+        <!-- TAURUS -->
+        <div class="circulo" id="taurus">
+            <div class="dado">
+                <div class="rotulo">Ticker</div>
+                <div class="valor" id="taurus-ticker">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Atual</div>
+                <div class="valor atual" id="taurus-atual">--</div>
+            </div>
+            <div class="dado">
+                <div class="rotulo">Posição</div>
+                <div class="valor" id="taurus-posicao">--</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configurações das planilhas
+        const PLANILHA_PRINCIPAL = '1wupg3BHcR1WNwPxf-0Kz9cS0VZMwoPsUP4ORj9GqR_Q';
+        const PLANILHA_SECUNDARIA = '1tAXn7C4DtxaEk5eERy8_MgRVDCs-RNAg4zxMR4vkap4';
+        const SHEET_NAME = 'CONTROLE 2025';
+
+        async function fetchCell(sheetId, sheetName, cell, circleId) {
+            try {
+                const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?sheet=${encodeURIComponent(sheetName)}&range=${cell}`;
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Erro na requisição');
+                const text = await response.text();
+                const json = JSON.parse(text.substr(47).slice(0, -2));
+                return json.table.rows[0]?.c[0]?.v || '--';
+            } catch (error) {
+                console.error(`Erro ao buscar ${cell} para ${circleId}:`, error);
+                document.getElementById(circleId)?.classList.add('erro');
+                return 'Erro';
+            }
+        }
+
+        function updateCircleBackground(circleId, posicao) {
+            const circle = document.getElementById(circleId);
+            if (!circle) return;
+
+            // Remove classes de fundo anteriores
+            circle.classList.remove('fundo-verde', 'fundo-vermelho');
+
+            // Converte o valor de posição para número
+            const posicaoNum = parseFloat(posicao);
+
+            // Aplica a classe de fundo com base no valor
+            if (!isNaN(posicaoNum)) {
+                if (posicaoNum > 0) {
+                    circle.classList.add('fundo-verde');
+                } else if (posicaoNum < 0) {
+                    circle.classList.add('fundo-vermelho');
+                }
+            }
+        }
+
+        async function updatePetrobrasData() {
+            const [ticker, atual, posicao] = await Promise.all([
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'E41', 'petrobras'),
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'F42', 'petrobras'),
+                fetchCell(PLANILHA_SECUNDARIA, SHEET_NAME, 'D8', 'petrobras')
+            ]);
+            document.getElementById('petrobras-ticker').textContent = ticker;
+            document.getElementById('petrobras-atual').textContent = atual;
+            document.getElementById('petrobras-posicao').textContent = posicao;
+            updateCircleBackground('petrobras', posicao);
+        }
+
+        async function updateKlabinData() {
+            const [ticker, atual, posicao] = await Promise.all([
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'E17', 'klabin'),
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'F18', 'klabin'),
+                fetchCell(PLANILHA_SECUNDARIA, SHEET_NAME, 'D5', 'klabin')
+            ]);
+            document.getElementById('klabin-ticker').textContent = ticker;
+            document.getElementById('klabin-atual').textContent = atual;
+            document.getElementById('klabin-posicao').textContent = posicao;
+            updateCircleBackground('klabin', posicao);
+        }
+
+        async function updateBancoBrasilData() {
+            const [ticker, atual, posicao] = await Promise.all([
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'E25', 'banco-brasil'),
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'F26', 'banco-brasil'),
+                fetchCell(PLANILHA_SECUNDARIA, SHEET_NAME, 'D6', 'banco-brasil')
+            ]);
+            document.getElementById('bb-ticker').textContent = ticker;
+            document.getElementById('bb-atual').textContent = atual;
+            document.getElementById('bb-posicao').textContent = posicao;
+            updateCircleBackground('banco-brasil', posicao);
+        }
+
+        async function updateBBSeguridadeData() {
+            const [ticker, atual, posicao] = await Promise.all([
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'E33', 'bb-seguridade'),
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'F34', 'bb-seguridade'),
+                fetchCell(PLANILHA_SECUNDARIA, SHEET_NAME, 'D7', 'bb-seguridade')
+            ]);
+            document.getElementById('bbseg-ticker').textContent = ticker;
+            document.getElementById('bbseg-atual').textContent = atual;
+            document.getElementById('bbseg-posicao').textContent = posicao;
+            updateCircleBackground('bb-seguridade', posicao);
+        }
+
+        async function updateSantanderData() {
+            const [ticker, atual, posicao] = await Promise.all([
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'H17', 'santander'),
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'I18', 'santander'),
+                fetchCell(PLANILHA_SECUNDARIA, SHEET_NAME, 'D9', 'santander')
+            ]);
+            document.getElementById('santander-ticker').textContent = ticker;
+            document.getElementById('santander-atual').textContent = atual;
+            document.getElementById('santander-posicao').textContent = posicao;
+            updateCircleBackground('santander', posicao);
+        }
+
+        async function updateValeData() {
+            const [ticker, atual, posicao] = await Promise.all([
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'H25', 'vale'),
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'I26', 'vale'),
+                fetchCell(PLANILHA_SECUNDARIA, SHEET_NAME, 'D10', 'vale')
+            ]);
+            document.getElementById('vale-ticker').textContent = ticker;
+            document.getElementById('vale-atual').textContent = atual;
+            document.getElementById('vale-posicao').textContent = posicao;
+            updateCircleBackground('vale', posicao);
+        }
+
+        async function updateTaurusData() {
+            const [ticker, atual, posicao] = await Promise.all([
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'E65', 'taurus'),
+                fetchCell(PLANILHA_PRINCIPAL, SHEET_NAME, 'F66', 'taurus'),
+                fetchCell(PLANILHA_SECUNDARIA, SHEET_NAME, 'D11', 'taurus')
+            ]);
+            document.getElementById('taurus-ticker').textContent = ticker;
+            document.getElementById('taurus-atual').textContent = atual;
+            document.getElementById('taurus-posicao').textContent = posicao;
+            updateCircleBackground('taurus', posicao);
+        }
+
+        async function updateAllData() {
+            document.querySelectorAll('.circulo').forEach(circle => {
+                circle.classList.remove('erro', 'fundo-verde', 'fundo-vermelho');
+            });
+            await Promise.all([
+                updatePetrobrasData(),
+                updateKlabinData(),
+                updateBancoBrasilData(),
+                updateBBSeguridadeData(),
+                updateSantanderData(),
+                updateValeData(),
+                updateTaurusData()
+            ]);
+        }
+
+        window.addEventListener('load', updateAllData);
+        setInterval(updateAllData, 30000);
+    </script>
+</body>
+</html>
